@@ -13,7 +13,7 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
         lora.list_available_loras()
 
     def list_items(self):
-        for index, (name, lora_on_disk) in enumerate(lora.available_loras.items()):
+        for index, (name, lora_on_disk) in enumerate(list(lora.available_loras.items())):
             path, ext = os.path.splitext(lora_on_disk.filename)
 
             alias = lora_on_disk.get_alias()

@@ -14,7 +14,7 @@ class ExtraNetworksPageCheckpoints(ui_extra_networks.ExtraNetworksPage):
 
     def list_items(self):
         checkpoint: sd_models.CheckpointInfo
-        for index, (name, checkpoint) in enumerate(sd_models.checkpoints_list.items()):
+        for index, (name, checkpoint) in enumerate(list(sd_models.checkpoints_list.items())):
             path, ext = os.path.splitext(checkpoint.filename)
             yield {
                 "name": checkpoint.name_for_extra,

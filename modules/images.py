@@ -632,7 +632,26 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         fullfn_without_extension = fullfn_without_extension[:max_name_len - max(4, len(extension))]
         params.filename = fullfn_without_extension + extension
         fullfn = params.filename
-    _atomically_save_image(image, fullfn_without_extension, extension)
+
+    # webp only allows for 16383*16383, for larger images, scaling down before safe, and also safe a jpeg file at original size
+    # https://developers.google.com/speed/webp/faq#what_is_the_maximum_size_a_webp_image_can_be
+    if extension.lower() == ".webp" and image.width > 16383 or image.height > 16383:
+        import sys
+        print(
+            "[INFO]:", "webp has size limit of (16383, 16383),",
+            f"while current size is ({image.width}, {image.height}),",
+            "will save a downscaled version in webp but also a jpg in original size",
+            file=sys.stderr
+        )
+
+        from PIL.Image import Resampling
+        downscaled_version = image.copy()
+        downscaled_version.thumbnail((16383, 16383), Resampling.LANCZOS)
+        _atomically_save_image(downscaled_version, fullfn_without_extension, extension)
+
+        _atomically_save_image(image, fullfn_without_extension, ".jpg")
+    else:
+        _atomically_save_image(image, fullfn_without_extension, extension)
 
     image.already_saved_as = fullfn
 
