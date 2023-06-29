@@ -3,6 +3,7 @@ import torch
 import inspect
 import k_diffusion.sampling
 from modules import prompt_parser, devices, sd_samplers_common
+from tqdm.auto import trange
 
 from modules.shared import opts, state
 import modules.shared as shared
@@ -37,7 +38,6 @@ samplers_data_k_diffusion = [
     for label, funcname, aliases, options in samplers_k_diffusion
     if hasattr(k_diffusion.sampling, funcname)
 ]
-from tqdm.auto import trange
 
 @torch.no_grad()
 def sample_dpmpp_2m_alt(model, x, sigmas, extra_args=None, callback=None, disable=None):
@@ -61,8 +61,8 @@ def sample_dpmpp_2m_alt(model, x, sigmas, extra_args=None, callback=None, disabl
             r = h_last / h
             denoised_d = (1 + 1 / (2 * r)) * denoised - (1 / (2 * r)) * old_denoised
             x = (sigma_fn(t_next) / sigma_fn(t)) * x - (-h).expm1() * denoised_d
-        sigma_progress = i / len(sigmas) 
-        adjustment_factor = 1 + (0.15 * (sigma_progress * sigma_progress)) 
+        sigma_progress = i / len(sigmas)
+        adjustment_factor = 1 + (0.15 * (sigma_progress * sigma_progress))
         old_denoised = denoised * adjustment_factor
     return x
 

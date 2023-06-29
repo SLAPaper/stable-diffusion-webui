@@ -31,7 +31,7 @@ class ExtraNetworksPageLora(ui_extra_networks.ExtraNetworksPage):
                     "sort_keys": {'default': index, **self.get_sort_keys(lora_on_disk.filename)},
 
                 }
-            except:
+            except Exception:
                 continue
 
     def allowed_directories_for_previews(self):
