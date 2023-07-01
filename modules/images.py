@@ -511,7 +511,7 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         else:
             pnginfo_data = None
 
-        image.save(filename, format=image_format, quality=opts.jpeg_quality, pnginfo=pnginfo_data)
+        image.save(filename, format=image_format, optimize=True, pnginfo=pnginfo_data)
 
     elif extension.lower() in (".jpg", ".jpeg", ".webp"):
         if image.mode == 'RGBA':
@@ -649,7 +649,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         downscaled_version.thumbnail((16383, 16383), Resampling.LANCZOS)
         _atomically_save_image(downscaled_version, fullfn_without_extension, extension)
 
-        _atomically_save_image(image, fullfn_without_extension, ".jpg")
+        _atomically_save_image(image, fullfn_without_extension, ".png")
     else:
         _atomically_save_image(image, fullfn_without_extension, extension)
 
