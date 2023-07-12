@@ -227,7 +227,10 @@ class ExtraNetworksPage:
         if shared.opts.samples_format not in preview_extensions:
             preview_extensions.append(shared.opts.samples_format)
 
-        potential_files = sum([[path + "." + ext, path + ".preview." + ext] for ext in preview_extensions], [])
+        from itertools import chain
+        potential_files = chain(
+            (path + "." + ext for ext in preview_extensions),
+            (path + ".preview." + ext for ext in preview_extensions))
 
         for file in potential_files:
             if os.path.isfile(file):
@@ -393,4 +396,3 @@ def setup_ui(ui, gallery):
         inputs=[ui.preview_target_filename, gallery, ui.preview_target_filename],
         outputs=[*ui.pages]
     )
-
