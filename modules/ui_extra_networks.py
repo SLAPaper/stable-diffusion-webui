@@ -1,6 +1,8 @@
 import os.path
 import urllib.parse
 from pathlib import Path
+import sys
+import traceback
 
 from modules import shared, ui_extra_networks_user_metadata, errors
 from modules.images import read_info_from_image, save_image_with_geninfo
@@ -412,7 +414,11 @@ def create_ui(container, button, tabname):
 
     def refresh():
         for pg in ui.stored_extra_pages:
-            pg.refresh()
+            try:
+                pg.refresh()
+            except Exception:
+                traceback.print_exc(file=sys.stderr)
+                continue
 
         ui.pages_contents = [pg.create_html(ui.tabname) for pg in ui.stored_extra_pages]
 
