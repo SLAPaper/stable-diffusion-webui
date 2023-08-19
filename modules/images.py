@@ -637,11 +637,15 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         """
         save image with .tmp extension to avoid race condition when another process detects new image in the directory
         """
+        import sys, traceback
         temp_file_path = f"{filename_without_extension}.tmp"
 
-        save_image_with_geninfo(image_to_save, info, temp_file_path, extension, existing_pnginfo=params.pnginfo, pnginfo_section_name=pnginfo_section_name)
+        try:
+            save_image_with_geninfo(image_to_save, info, temp_file_path, extension, existing_pnginfo=params.pnginfo, pnginfo_section_name=pnginfo_section_name)
 
-        os.replace(temp_file_path, filename_without_extension + extension)
+            os.replace(temp_file_path, filename_without_extension + extension)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
 
     fullfn_without_extension, extension = os.path.splitext(params.filename)
     if hasattr(os, 'statvfs'):
@@ -657,16 +661,12 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         print(
             "[INFO]:", "webp has size limit of (16383, 16383),",
             f"while current size is ({image.width}, {image.height}),",
-            "will save a downscaled version in webp but also a png in original size",
+            "will save a png instead",
             file=sys.stderr
         )
 
-        from PIL.Image import Resampling
-        downscaled_version = image.copy()
-        downscaled_version.thumbnail((16383, 16383), Resampling.LANCZOS)
-        _atomically_save_image(downscaled_version, fullfn_without_extension, extension)
-
         _atomically_save_image(image, fullfn_without_extension, ".png")
+        fullfn = fullfn_without_extension + ".png"
     else:
         _atomically_save_image(image, fullfn_without_extension, extension)
 
