@@ -536,7 +536,21 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         elif image.mode == 'I;16':
             image = image.point(lambda p: p * 0.0038910505836576).convert("RGB" if extension.lower() == ".webp" else "L")
 
-        image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
+        if extension.lower() == ".webp":  # walk through method to work around webp encoding error 6
+            # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#webp-saving
+            # https://github.com/python-pillow/Pillow/issues/5461
+            last_exception = None
+            for method in (4, 6, 5, 3, 2, 1, 0):
+                try:
+                    image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless, method=method)
+                    return
+                except ValueError as e:
+                    last_exception = e
+                    continue
+            if last_exception is not None:
+                raise last_exception from None
+        else:
+            image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
 
         if opts.enable_pnginfo and geninfo is not None:
             exif_bytes = piexif.dump({
@@ -654,21 +668,34 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         params.filename = fullfn_without_extension + extension
         fullfn = params.filename
 
-    # webp only allows for 16383*16383, for larger images, scaling down before save, and also save a png file at original size
+    # webp only allows for 16383*16383, for larger images, save a jpeg file at original size
     # https://developers.google.com/speed/webp/faq#what_is_the_maximum_size_a_webp_image_can_be
-    if extension.lower() == ".webp" and image.width > 16383 or image.height > 16383:
+    if extension.lower() == ".webp" and max(image.width, image.height) > 16383:
         import sys
         print(
             "[INFO]:", "webp has size limit of (16383, 16383),",
+            f"while current size is ({image.width}, {image.height}),",
+            "will save a jpeg instead",
+            file=sys.stderr
+        )
+
+        extension = ".jpg"
+        fullfn = fullfn_without_extension + ".jpg"
+
+    # jpeg only allows for 65535*65535, for larger images, save a png file instead
+    if extension.lower() in (".jpeg", ".jpg") and max(image.width, image.height) > 65535:
+        import sys
+        print(
+            "[INFO]:", "jpeg has size limit of (16383, 16383),",
             f"while current size is ({image.width}, {image.height}),",
             "will save a png instead",
             file=sys.stderr
         )
 
-        _atomically_save_image(image, fullfn_without_extension, ".png")
+        extension = ".png"
         fullfn = fullfn_without_extension + ".png"
-    else:
-        _atomically_save_image(image, fullfn_without_extension, extension)
+
+    _atomically_save_image(image, fullfn_without_extension, extension)
 
     image.already_saved_as = fullfn
 
