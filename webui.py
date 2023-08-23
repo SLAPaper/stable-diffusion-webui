@@ -89,6 +89,8 @@ if cmd_opts.server_name:
 else:
     server_name = "0.0.0.0" if cmd_opts.listen else None
 
+from PIL import ImageDraw, ImageFont
+ImageDraw.ImageDraw.font = ImageFont.truetype("C:/Windows/Fonts/DENGL.TTF")
 
 def fix_asyncio_event_loop_policy():
     """
