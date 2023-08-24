@@ -543,7 +543,7 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         else:
             pnginfo_data = None
 
-        image.save(filename, format=image_format, quality=opts.jpeg_quality, pnginfo=pnginfo_data)
+        image.save(filename, format=image_format, optimize=True, pnginfo=pnginfo_data)
 
     elif extension.lower() in (".jpg", ".jpeg", ".webp"):
         if image.mode == 'RGBA':
@@ -551,7 +551,21 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         elif image.mode == 'I;16':
             image = image.point(lambda p: p * 0.0038910505836576).convert("RGB" if extension.lower() == ".webp" else "L")
 
-        image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
+        if extension.lower() == ".webp":  # walk through method to work around webp encoding error 6
+            # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#webp-saving
+            # https://github.com/python-pillow/Pillow/issues/5461
+            last_exception = None
+            for method in (4, 6, 5, 3, 2, 1, 0):
+                try:
+                    image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless, method=method)
+                    return
+                except ValueError as e:
+                    last_exception = e
+                    continue
+            if last_exception is not None:
+                raise last_exception from None
+        else:
+            image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
 
         if opts.enable_pnginfo and geninfo is not None:
             exif_bytes = piexif.dump({
@@ -657,11 +671,15 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         """
         save image with .tmp extension to avoid race condition when another process detects new image in the directory
         """
+        import sys, traceback
         temp_file_path = f"{filename_without_extension}.tmp"
 
-        save_image_with_geninfo(image_to_save, info, temp_file_path, extension, existing_pnginfo=params.pnginfo, pnginfo_section_name=pnginfo_section_name)
+        try:
+            save_image_with_geninfo(image_to_save, info, temp_file_path, extension, existing_pnginfo=params.pnginfo, pnginfo_section_name=pnginfo_section_name)
 
-        os.replace(temp_file_path, filename_without_extension + extension)
+            os.replace(temp_file_path, filename_without_extension + extension)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
 
     fullfn_without_extension, extension = os.path.splitext(params.filename)
     if hasattr(os, 'statvfs'):
@@ -669,6 +687,50 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         fullfn_without_extension = fullfn_without_extension[:max_name_len - max(4, len(extension))]
         params.filename = fullfn_without_extension + extension
         fullfn = params.filename
+
+    if extension.lower() == ".webp":
+        import sys
+
+        # webp only allows for 16383*16383, for larger images, save a jpeg file at original size
+        # https://developers.google.com/speed/webp/faq#what_is_the_maximum_size_a_webp_image_can_be
+        if max(image.width, image.height) > 16383:
+            print("[INFO]:",
+                  "webp has size limit of (16383, 16383),",
+                  f"while current size is ({image.width}, {image.height}),",
+                  "will save a jpeg instead",
+                  file=sys.stderr)
+
+            extension = ".jpg"
+            fullfn = fullfn_without_extension + ".jpg"
+
+        # very large webp image that reach nearly both limit may also cause PARTITION0_OVERFLOW error, see
+        # [-partition_limit int] in https://developers.google.com/speed/webp/docs/cwebp#lossy_options
+        elif image.width * image.height > 16383**2 // 2:
+            print(
+                "[INFO]:",
+                "webp may throw PARTITION0_OVERFLOW when handling large image,",
+                f"while current size is ({image.width}, {image.height}),",
+                "will save a jpeg instead",
+                file=sys.stderr)
+
+            extension = ".jpg"
+            fullfn = fullfn_without_extension + ".jpg"
+
+    if extension.lower() in (".jpeg", ".jpg"):
+        import sys
+
+        # jpeg only allows for 65535*65535, for larger images, save a png file instead
+        # https://www.adobe.com/creativecloud/file-types/image/comparison/jpeg-vs-png.html
+        if max(image.width, image.height) > 65535:
+            print("[INFO]:",
+                  "jpeg has size limit of (65535, 65535),",
+                  f"while current size is ({image.width}, {image.height}),",
+                  "will save a png instead",
+                  file=sys.stderr)
+
+            extension = ".png"
+            fullfn = fullfn_without_extension + ".png"
+
     _atomically_save_image(image, fullfn_without_extension, extension)
 
     image.already_saved_as = fullfn
