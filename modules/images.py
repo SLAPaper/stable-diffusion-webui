@@ -551,21 +551,7 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         elif image.mode == 'I;16':
             image = image.point(lambda p: p * 0.0038910505836576).convert("RGB" if extension.lower() == ".webp" else "L")
 
-        if extension.lower() == ".webp":  # walk through method to work around webp encoding error 6
-            # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#webp-saving
-            # https://github.com/python-pillow/Pillow/issues/5461
-            last_exception = None
-            for method in (4, 6, 5, 3, 2, 1, 0):
-                try:
-                    image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless, method=method)
-                    return
-                except ValueError as e:
-                    last_exception = e
-                    continue
-            if last_exception is not None:
-                raise last_exception from None
-        else:
-            image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
+        image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
 
         if opts.enable_pnginfo and geninfo is not None:
             exif_bytes = piexif.dump({
