@@ -273,11 +273,14 @@ class ExtraNetworksPage:
         Find a preview PNG for a given path (without extension) and call link_preview on it.
         """
 
+        from itertools import chain
         preview_extensions = ["png", "jpg", "jpeg", "webp"]
         if shared.opts.samples_format not in preview_extensions:
             preview_extensions.append(shared.opts.samples_format)
 
-        potential_files = sum([[path + "." + ext, path + ".preview." + ext] for ext in preview_extensions], [])
+        potential_files = chain(
+            (path + "." + ext for ext in preview_extensions),
+            (path + ".preview." + ext for ext in preview_extensions))
 
         for file in potential_files:
             if os.path.isfile(file):
@@ -394,8 +397,14 @@ def create_ui(interface: gr.Blocks, unrelated_tabs, tabname):
         return ui.pages_contents
 
     def refresh():
+        import sys
+        import traceback
         for pg in ui.stored_extra_pages:
-            pg.refresh()
+            try:
+                pg.refresh()
+            except Exception:
+                traceback.print_exc(file=sys.stderr)
+                continue
 
         ui.pages_contents = [pg.create_html(ui.tabname) for pg in ui.stored_extra_pages]
 
