@@ -666,7 +666,8 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
                 while os.path.exists(filename):
                     n += 1
                     filename = f"{filename_without_extension}-{n}{extension}"
-                os.replace(temp_file_path, filename)
+
+            os.replace(temp_file_path, filename)
         except Exception:
             traceback.print_exc(file=sys.stderr)
 
