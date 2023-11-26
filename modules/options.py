@@ -76,7 +76,7 @@ class Options:
 
     def __init__(self, data_labels: dict[str, OptionInfo], restricted_opts):
         self.data_labels = data_labels
-        self.data = {k: v.default for k, v in self.data_labels.items()}
+        self.data = {k: v.default for k, v in self.data_labels.items() if not v.do_not_save}
         self.restricted_opts = restricted_opts
 
     def __setattr__(self, key, value):
@@ -158,7 +158,7 @@ class Options:
         assert not cmd_opts.freeze_settings, "saving settings is disabled"
 
         with open(filename, "w", encoding="utf8") as file:
-            json.dump(self.data, file, indent=4)
+            json.dump(self.data, file, indent=4, ensure_ascii=False)
 
     def same_type(self, x, y):
         if x is None or y is None:
@@ -210,7 +210,7 @@ class Options:
 
     def add_option(self, key, info):
         self.data_labels[key] = info
-        if key not in self.data:
+        if key not in self.data and not info.do_not_save:
             self.data[key] = info.default
 
     def reorder(self):
