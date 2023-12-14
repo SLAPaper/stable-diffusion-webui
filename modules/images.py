@@ -835,3 +835,4 @@ def flatten(img, bgcolor):
         img = background
 
     return img.convert('RGB')
+
