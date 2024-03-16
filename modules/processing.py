@@ -896,52 +896,26 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             if p.scripts is not None:
                 p.scripts.process_batch(p, batch_number=n, prompts=p.prompts, seeds=p.seeds, subseeds=p.subseeds)
 
+            p.setup_conds()
+
+            p.extra_generation_params.update(model_hijack.extra_generation_params)
+
             # params.txt should be saved after scripts.process_batch, since the
             # infotext could be modified by that callback
             # Example: a wildcard processed by process_batch sets an extra model
             # strength, which is saved as "Model Strength: 1.0" in the infotext
-            if n == 0:
+            if n == 0 and not cmd_opts.no_prompt_history:
                 with open(os.path.join(paths.data_path, "params.txt"), "w", encoding="utf8") as file:
                     processed = Processed(p, [])
                     file.write(processed.infotext(p, 0))
 
-            p.setup_conds()
-
             for comment in model_hijack.comments:
                 p.comment(comment)
-
-            p.extra_generation_params.update(model_hijack.extra_generation_params)
 
             if p.n_iter > 1:
                 shared.state.job = f"Batch {n+1} out of {p.n_iter}"
 
-            def rescale_zero_terminal_snr_abar(alphas_cumprod):
-                alphas_bar_sqrt = alphas_cumprod.sqrt()
-
-                # Store old values.
-                alphas_bar_sqrt_0 = alphas_bar_sqrt[0].clone()
-                alphas_bar_sqrt_T = alphas_bar_sqrt[-1].clone()
-
-                # Shift so the last timestep is zero.
-                alphas_bar_sqrt -= (alphas_bar_sqrt_T)
-
-                # Scale so the first timestep is back to the old value.
-                alphas_bar_sqrt *= alphas_bar_sqrt_0 / (alphas_bar_sqrt_0 - alphas_bar_sqrt_T)
-
-                # Convert alphas_bar_sqrt to betas
-                alphas_bar = alphas_bar_sqrt**2  # Revert sqrt
-                alphas_bar[-1] = 4.8973451890853435e-08
-                return alphas_bar
-
-            if hasattr(p.sd_model, 'alphas_cumprod') and hasattr(p.sd_model, 'alphas_cumprod_original'):
-                p.sd_model.alphas_cumprod = p.sd_model.alphas_cumprod_original.to(shared.device)
-
-                if opts.use_downcasted_alpha_bar:
-                    p.extra_generation_params['Downcast alphas_cumprod'] = opts.use_downcasted_alpha_bar
-                    p.sd_model.alphas_cumprod = p.sd_model.alphas_cumprod.half().to(shared.device)
-                if opts.sd_noise_schedule == "Zero Terminal SNR":
-                    p.extra_generation_params['Noise Schedule'] = opts.sd_noise_schedule
-                    p.sd_model.alphas_cumprod = rescale_zero_terminal_snr_abar(p.sd_model.alphas_cumprod).to(shared.device)
+            sd_models.apply_alpha_schedule_override(p.sd_model, p)
 
             with devices.without_autocast() if devices.unet_needs_upcast else devices.autocast():
                 samples_ddim = p.sample(conditioning=p.c, unconditional_conditioning=p.uc, seeds=p.seeds, subseeds=p.subseeds, subseed_strength=p.subseed_strength, prompts=p.prompts)
