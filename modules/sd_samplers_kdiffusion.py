@@ -24,7 +24,7 @@ samplers_k_diffusion = [
     ('DPM fast', 'sample_dpm_fast', ['k_dpm_fast'], {"uses_ensd": True}),
     ('DPM adaptive', 'sample_dpm_adaptive', ['k_dpm_ad'], {"uses_ensd": True}),
     ('Restart', sd_samplers_extra.restart_sampler, ['restart'], {'scheduler': 'karras', "second_order": True}),
-    ('DPM++ 2M alt', 'sample_dpmpp_2m_alt', ['k_dpmpp_2m_alt_ka'], {'scheduler': 'karras'}),
+    ('DPM++ 2M alt', 'sample_dpmpp_2m_alt', ['k_dpmpp_2m_alt_ka'], {'scheduler': 'exponential'}),
 ]
 
 @torch.no_grad()
@@ -56,7 +56,7 @@ def sample_dpmpp_2m_alt(model, x, sigmas, extra_args=None, callback=None, disabl
         old_denoised = denoised * adjustment_factor
     return x
 
-k_diffusion.sampling.sample_dpmpp_2m_alt = sample_dpmpp_2m_alt
+setattr(k_diffusion.sampling, "sample_dpmpp_2m_alt", sample_dpmpp_2m_alt)
 
 
 samplers_data_k_diffusion = [
