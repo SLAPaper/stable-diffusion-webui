@@ -24,7 +24,8 @@ samplers_k_diffusion = [
     ('DPM fast', 'sample_dpm_fast', ['k_dpm_fast'], {"uses_ensd": True}),
     ('DPM adaptive', 'sample_dpm_adaptive', ['k_dpm_ad'], {"uses_ensd": True}),
     ('Restart', sd_samplers_extra.restart_sampler, ['restart'], {'scheduler': 'karras', "second_order": True}),
-    ('DPM++ 2M alt', 'sample_dpmpp_2m_alt', ['k_dpmpp_2m_alt_ka'], {'scheduler': 'exponential'}),
+    ('DPM++ 2M alt Exponential', 'sample_dpmpp_2m_alt', ['k_dpmpp_2m_alt_ka'], {'scheduler': 'exponential'}),
+    ('Euler A SGMUniform', 'sample_euler_ancestral', ['k_euler_a', 'k_euler_ancestral'], {'scheduler': 'sgm_uniform', "uses_ensd": True}),
 ]
 
 @torch.no_grad()
