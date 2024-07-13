@@ -118,8 +118,7 @@ def apply_size(p, x: str, xs) -> None:
 
 
 def find_vae(name: str):
-    name = name.strip().lower()
-    if name in ('auto', 'automatic'):
+    if (name := name.strip().lower()) in ('auto', 'automatic'):
         return 'Automatic'
     elif name == 'none':
         return 'None'
