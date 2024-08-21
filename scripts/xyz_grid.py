@@ -122,7 +122,14 @@ def find_vae(name: str):
         return 'Automatic'
     elif name == 'none':
         return 'None'
-    return next((k for k in modules.sd_vae.vae_dict if k.lower() == name), print(f'No VAE found for {name}; using Automatic') or 'Automatic')
+
+    candidate_vae = [k for k in modules.sd_vae.vae_dict if k.lower() == name]
+    if candidate_vae:
+        return candidate_vae[0]
+    
+    print(f'No VAE found for {name}; using Automatic') 
+
+    return 'Automatic'
 
 
 def apply_vae(p, x, xs):
